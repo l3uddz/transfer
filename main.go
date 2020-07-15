@@ -31,6 +31,7 @@ var (
 		Pass         string `help:"Transfer.sh Basic Auth Password"`
 		MaxDownloads int    `help:"Max Downloads"`
 		MaxDays      int    `help:"Max Days"`
+		Filename     string `help:"Name of file when uploaded"`
 
 		// args
 		Filepath string `arg:"" required:"1" name:"filepath" help:"File to upload"`
@@ -89,8 +90,12 @@ func main() {
 	bar.Start()
 	defer bar.Finish()
 
+	if cli.Filename == "" {
+		cli.Filename = fi.Name()
+	}
+
 	// prepare request
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", cli.URL, fi.Name()), bar.NewProxyReader(f))
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", cli.URL, cli.Filename), bar.NewProxyReader(f))
 	if err != nil {
 		fmt.Println("Failed creating file transfer request:", err)
 		os.Exit(1)
