@@ -26,12 +26,12 @@ var (
 		Globals
 
 		// flags
-		URL          string `default:"https://transfer.sh" help:"Transfer.sh Service URL"`
-		User         string `help:"Transfer.sh Basic Auth Username"`
-		Pass         string `help:"Transfer.sh Basic Auth Password"`
-		MaxDownloads int    `help:"Max Downloads"`
-		MaxDays      int    `help:"Max Days"`
-		Filename     string `help:"Name of file when uploaded"`
+		URL       string `default:"https://transfer.sh" help:"Transfer.sh Service URL"`
+		User      string `help:"Transfer.sh Basic Auth Username"`
+		Pass      string `help:"Transfer.sh Basic Auth Password"`
+		Downloads int    `help:"Maximum amount of downloads"`
+		Days      int    `help:"Maximum amount of days"`
+		Filename  string `help:"Name of file when uploaded"`
 
 		// args
 		Filepath string `arg:"" required:"1" name:"filepath" help:"File to upload"`
@@ -108,11 +108,11 @@ func main() {
 	}
 
 	req.Header.Set("Content-Type", ct)
-	if cli.MaxDays > 0 {
-		req.Header.Set("Max-Days", strconv.Itoa(cli.MaxDays))
+	if cli.Days > 0 {
+		req.Header.Set("Max-Days", strconv.Itoa(cli.Days))
 	}
-	if cli.MaxDownloads > 0 {
-		req.Header.Set("Max-Downloads", strconv.Itoa(cli.MaxDownloads))
+	if cli.Downloads > 0 {
+		req.Header.Set("Max-Downloads", strconv.Itoa(cli.Downloads))
 	}
 
 	if cli.User != "" && cli.Pass != "" {
