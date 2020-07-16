@@ -13,14 +13,10 @@ import (
 
 type Globals struct {
 	Version VersionFlag `name:"version" help:"Print version information and quit"`
+	Update  UpdateFlag  `name:"update" help:"Check for an updated version"`
 }
 
 var (
-	// Build Vars
-	Version   string
-	Timestamp string
-	GitCommit string
-
 	// CLI
 	cli struct {
 		Globals
@@ -37,16 +33,6 @@ var (
 		Filepath string `arg:"" required:"1" name:"filepath" help:"File to upload"`
 	}
 )
-
-type VersionFlag string
-
-func (v VersionFlag) Decode(ctx *kong.DecodeContext) error { return nil }
-func (v VersionFlag) IsBool() bool                         { return true }
-func (v VersionFlag) BeforeApply(app *kong.Kong, vars kong.Vars) error {
-	fmt.Println(vars["version"])
-	app.Exit(0)
-	return nil
-}
 
 func main() {
 	// parse cli
