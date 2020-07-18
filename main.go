@@ -56,17 +56,60 @@ func main() {
 		os.Exit(1)
 	}
 
+	// transfer
+	os.Exit(transferFile())
+}
+
+func transferFile() (exitCode int) {
 	// validate filepath argument
 	fi, err := os.Stat(cli.Filepath)
 	if err != nil {
 		fmt.Println("Failed getting info of file to transfer:", err)
-		os.Exit(1)
+		return 1
 	}
 
+	// archive folder
+	if fi.IsDir() {
+		// get temporary path for the archive file
+		tf, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("%s_*.zip", fi.Name()))
+		if err != nil {
+			fmt.Println("Failed getting temporary archive path:", err)
+		}
+
+		// remove the temporary archive before exiting
+		defer func(path string) {
+			if err := os.Remove(path); err != nil {
+				fmt.Println("Failed removing temporary archive:", err)
+				exitCode = 1
+			}
+		}(tf.Name())
+
+		// archive directory
+		if err := archiveFolder(cli.Filepath, tf.Name()); err != nil {
+			fmt.Println("Failed archiving to temporary archive:", err)
+			return 1
+		}
+
+		// validate new filepath to transfer
+		fi, err = os.Stat(tf.Name())
+		if err != nil {
+			fmt.Println("Failed getting info of temporary archive file to transfer:", err)
+			return 1
+		}
+
+		// update file transfer detail(s)
+		cli.Filepath = tf.Name()
+	}
+
+	if cli.Filename == "" {
+		cli.Filename = fi.Name()
+	}
+
+	// open file for transfer
 	f, err := os.Open(cli.Filepath)
 	if err != nil {
 		fmt.Println("Failed opening file to transfer:", err)
-		os.Exit(1)
+		return 1
 	}
 
 	defer f.Close()
@@ -76,21 +119,17 @@ func main() {
 	bar.Start()
 	defer bar.Finish()
 
-	if cli.Filename == "" {
-		cli.Filename = fi.Name()
-	}
-
 	// prepare request
 	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", cli.URL, cli.Filename), bar.NewProxyReader(f))
 	if err != nil {
 		fmt.Println("Failed creating file transfer request:", err)
-		os.Exit(1)
+		return 1
 	}
 
 	ct, err := getContentFileType(f)
 	if err != nil {
 		fmt.Println("Failed determining content type for file transfer request:", err)
-		os.Exit(1)
+		return 1
 	}
 
 	req.Header.Set("Content-Type", ct)
@@ -109,21 +148,21 @@ func main() {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("Failed sending file transfer request:", err)
-		os.Exit(1)
+		return 1
 	}
 
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		fmt.Println("Failed validating file transfer response, unexpected status:", res.Status)
-		os.Exit(1)
+		return 1
 	}
 
 	// read response
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("Failed reading file transfer response body:", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// get delete link
@@ -135,6 +174,8 @@ func main() {
 		fmt.Println("---")
 		fmt.Println("Delete URL:", deleteURL)
 	}
+
+	return 0
 }
 
 func getContentFileType(out *os.File) (string, error) {
