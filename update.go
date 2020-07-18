@@ -54,10 +54,10 @@ func (f UpdateFlag) BeforeApply(app *kong.Kong, vars kong.Vars) error {
 
 	if err := selfupdate.UpdateTo(latest.AssetURL, exe); err != nil {
 		fmt.Println("Failed updating existing binary to latest release:", err)
+		app.Exit(1)
 	}
 
 	fmt.Println("Successfully updated to the latest version:", latest.Version)
-
 	app.Exit(0)
 	return nil
 }
