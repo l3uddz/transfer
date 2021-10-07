@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/alecthomas/kong"
-	"github.com/cheggaaa/pb/v3"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/alecthomas/kong"
+	"github.com/cheggaaa/pb/v3"
 )
 
 type Globals struct {
@@ -22,12 +23,12 @@ var (
 		Globals
 
 		// flags
-		URL       string `default:"https://transfer.sh" help:"Transfer.sh Service URL"`
+		URL       string `default:"transfer.sh" short:"u" help:"Transfer.sh Service URL" `
 		User      string `help:"Transfer.sh Basic Auth Username"`
 		Pass      string `help:"Transfer.sh Basic Auth Password"`
-		Downloads int    `help:"Maximum amount of downloads"`
-		Days      int    `help:"Maximum amount of days"`
-		Filename  string `help:"Name of file when uploaded"`
+		Downloads int    `short:"d" help:"Maximum amount of downloads"`
+		Days      int    `short:"D" help:"Maximum amount of days"`
+		Filename  string `short:"n" help:"Name of file when uploaded"`
 
 		// args
 		Filepath string `arg:"" required:"1" name:"filepath" help:"File to upload"`
@@ -120,7 +121,7 @@ func transferFile() (exitCode int) {
 	defer bar.Finish()
 
 	// prepare request
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", cli.URL, cli.Filename), bar.NewProxyReader(f))
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", "https://"+cli.URL, cli.Filename), bar.NewProxyReader(f))
 	if err != nil {
 		fmt.Println("Failed creating file transfer request:", err)
 		return 1
