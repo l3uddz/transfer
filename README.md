@@ -5,16 +5,16 @@ Simple CLI tool that allow upload files and directories to transfer.sh. As an op
 # Cli arguments
 
 ### Flags:
-  -h  | --help              |   Show context-sensitive help.
-  ----|---------------------|-----------------------------------
-      |  --version          |   Print version information and quit
-      |  --update           |  Check for an updated version
-  -u  | --url=transfer.sh |   Transfer.sh Service URL
-      |  --user=STRING      |  Transfer.sh Basic Auth Username
-      |  --pass=STRING      |  Transfer.sh Basic Auth Password
-  -d  | --downloads=INT     |   Maximum amount of downloads
-  -D  | --days=INT          |   Maximum amount of days
-  -n  | --filename=STRING   |   Name of file when uploaded
+  -h      | --help              |   Show context-sensitive help.
+  --------|---------------------|-----------------------------------
+   &nbsp; |  --version          |   Print version information and quit 
+   &nbsp; |  --update           |  Check for an updated version
+  -u      | --url=transfer.sh   |   Transfer.sh Service URL
+   &nbsp; |  --user=STRING      |  Transfer.sh Basic Auth Username
+  &nbsp;  |  --pass=STRING      |  Transfer.sh Basic Auth Password
+  -d      | --downloads=INT     |   Maximum amount of downloads   
+  -D      | --days=INT          |   Maximum amount of days  
+  -n      | --filename=STRING   |   Name of file when uploaded
 
 
 
