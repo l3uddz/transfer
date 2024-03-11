@@ -24,5 +24,4 @@ jobs:
         with:
           version: v1.54
           install-mode: "binary"
-          skip-go-installation: true
           skip-pkg-cache: true
