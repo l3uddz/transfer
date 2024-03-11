@@ -1,17 +1,30 @@
-# https://goreleaser.com
+version: 1
 project_name: transfer
 
 # Build
 builds:
-  -
-    env:
+  - env:
       - CGO_ENABLED=0
+      - >-
+        {{- if eq .Os "darwin" }}
+          {{- if eq .Arch "amd64"}}CC=o64-clang{{- end }}
+          {{- if eq .Arch "arm64"}}CC=aarch64-apple-darwin20.2-clang{{- end }}
+        {{- end }}
+        {{- if eq .Os "windows" }}
+          {{- if eq .Arch "amd64" }}CC=x86_64-w64-mingw32-gcc{{- end }}
+        {{- end }}
     goos:
       - linux
       - darwin
       - windows
     goarch:
       - amd64
+      - arm64
+
+    ignore:
+      - goos: windows
+        goarch: arm64
+
     ldflags:
       - -s -w
       - -X "main.Version={{ .Version }}"
@@ -22,14 +35,13 @@ builds:
 
 # Archive
 archives:
-  -
-    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - name_template: >-
+      {{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{- if eq .Arch "arm64" }}aarch64{{- else }}{{ .Arch }}{{- end }}
     format: "binary"
 
 # Checksum
 checksum:
-  name_template: "checksums.txt"
-  algorithm: sha512
+  disable: true
 
 # Snapshot
 snapshot:
@@ -37,8 +49,16 @@ snapshot:
 
 # Changelog
 changelog:
+  use: github
   filters:
     exclude:
       - "^docs:"
       - "^test:"
       - "^Merge branch"
+      - "^CI:"
+
+release:
+  github:
+    owner: azhinu
+    name: transfer
+  name_template: "{{title .ProjectName}} v{{.Version}}"
