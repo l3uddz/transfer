@@ -20,6 +20,11 @@ builds:
     goarch:
       - amd64
       - arm64
+
+    ignore:
+      - goos: windows
+        goarch: arm64
+
     ldflags:
       - -s -w
       - -X "main.Version={{ .Version }}"
@@ -36,8 +41,7 @@ archives:
 
 # Checksum
 checksum:
-  name_template: "checksums.txt"
-  algorithm: sha512
+  disable: true
 
 # Snapshot
 snapshot:
@@ -45,6 +49,7 @@ snapshot:
 
 # Changelog
 changelog:
+  use: github
   filters:
     exclude:
       - "^docs:"
@@ -56,4 +61,4 @@ release:
   github:
     owner: azhinu
     name: transfer
-  name_template: "{{.ProjectName}}-v{{.Version}}"
+  name_template: "{{title .ProjectName}} v{{.Version}}"
