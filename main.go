@@ -2,36 +2,42 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/kong"
+	kongyaml "github.com/alecthomas/kong-yaml"
 	"github.com/cheggaaa/pb/v3"
 )
 
-type Globals struct {
-	Version VersionFlag `name:"version" help:"Print version information and quit"`
-	Update  UpdateFlag  `name:"update" help:"Check for an updated version"`
-}
+const (
+	// Version vars. Will be set during build
+	Version = "1.0.0"
+	Timestamp = "2021-01-01T00:00:00Z"
+	GitCommit = "0000000"
+	Repo = "azhinu/transfer"
+)
 
 var (
 	// CLI
 	cli struct {
-		Globals
-
 		// flags
-		URL       string `default:"transfer.sh" short:"u" help:"Transfer.sh Service URL" `
-		User      string `help:"Transfer.sh Basic Auth Username"`
-		Pass      string `help:"Transfer.sh Basic Auth Password"`
-		Downloads int    `short:"d" help:"Maximum amount of downloads"`
-		Days      int    `short:"D" help:"Maximum amount of days"`
-		Filename  string `short:"n" help:"Name of file when uploaded"`
+		Version 	bool `name:"version" help:"Print version information and quit"`
+		Update 		bool `name:"update" help:"Check for an updated version"`
+
+		URL       string `short:"u" default:"transfer.sh" help:"Transfer.sh Service URL" env:"TRANSFER_URL"`
+		User      string `placeholder:"username" help:"Transfer.sh Basic Auth Username" env:"TRANSFER_USER"`
+		Pass      string `placeholder:"secret" help:"Transfer.sh Basic Auth Password" env:"TRANSFER_PASS"`
+		Downloads int    `short:"d" default:"5" help:"Maximum amount of downloads" env:"TRANSFER_DOWNLOADS"`
+		Days      int    `short:"D" default:"5" help:"Maximum amount of days" env:"TRANSFER_DAYS"`
+		Filename  string `short:"n" placeholder:"my_file" help:"Name of file when uploaded"`
 
 		// args
-		Filepath string `arg:"" required:"1" name:"filepath" help:"File to upload"`
+		// Needs to test type
+		Filepath string `arg:"" optional:"" type:"path" help:"File or directory to upload"`
 	}
 )
 
@@ -41,23 +47,31 @@ func main() {
 		kong.Name("transfer"),
 		kong.Description("Upload files to transfer.sh"),
 		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{
-			Summary: true,
-			Compact: true,
-		}),
-		kong.Vars{
-			"version": fmt.Sprintf("%s (%s@%s)", Version, GitCommit, Timestamp),
-		},
-
-		kong.Configuration(kong.JSON, "~/.transfer.json", "~/.config/transfer/transfer.json"),
+		kong.Configuration(kongyaml.Loader, "~/.transfer.yml", "~/.config/transfer/transfer.yml"),
 	)
-
-	if err := ctx.Validate(); err != nil {
-		fmt.Println("Failed parsing cli:", err)
-		os.Exit(1)
+	
+	if cli.Version {
+		fmt.Println("Version:", Version, "GitCommit:", GitCommit, "Timestamp:", Timestamp)
+		os.Exit(0)
+	}
+	
+	if cli.Update {
+		fmt.Println("Testing for updates...")
+		if err := selfUpdate(); err != nil {
+			os.Exit(1)
+			} else {
+				os.Exit(0)
+			}
+		}
+		
+	if cli.Filepath == "" {
+		err := ctx.PrintUsage(true)
+		if err != nil {
+			fmt.Println("Failed printing usage:", err)
+		}
+		os.Exit(0)
 	}
 
-	// transfer
 	os.Exit(transferFile())
 }
 
@@ -72,7 +86,7 @@ func transferFile() (exitCode int) {
 	// archive folder
 	if fi.IsDir() {
 		// get temporary path for the archive file
-		tf, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("%s_*.zip", fi.Name()))
+		tf, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("%s_*.zip", fi.Name()))
 		if err != nil {
 			fmt.Println("Failed getting temporary archive path:", err)
 		}
@@ -120,8 +134,19 @@ func transferFile() (exitCode int) {
 	bar.Start()
 	defer bar.Finish()
 
+	// Append https if schema not present
+	if cli.URL[:4] != "http" {
+		cli.URL = "https://" + cli.URL
+	}
+
+	// Remove tailing slash
+	if cli.URL[len(cli.URL)-1:] == "/" {
+		cli.URL = cli.URL[:len(cli.URL)-1]
+	}
+
+
 	// prepare request
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", "https://"+cli.URL, cli.Filename), bar.NewProxyReader(f))
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/%s", cli.URL, cli.Filename), bar.NewProxyReader(f))
 	if err != nil {
 		fmt.Println("Failed creating file transfer request:", err)
 		return 1
@@ -134,12 +159,8 @@ func transferFile() (exitCode int) {
 	}
 
 	req.Header.Set("Content-Type", ct)
-	if cli.Days > 0 {
-		req.Header.Set("Max-Days", strconv.Itoa(cli.Days))
-	}
-	if cli.Downloads > 0 {
-		req.Header.Set("Max-Downloads", strconv.Itoa(cli.Downloads))
-	}
+	req.Header.Set("Max-Days", strconv.Itoa(cli.Days))
+	req.Header.Set("Max-Downloads", strconv.Itoa(cli.Downloads))
 
 	if cli.User != "" && cli.Pass != "" {
 		req.SetBasicAuth(cli.User, cli.Pass)
@@ -155,14 +176,14 @@ func transferFile() (exitCode int) {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		fmt.Println("Failed validating file transfer response, unexpected status:", res.Status)
+		fmt.Println("Failed to send file, unexpected status:", res.Status)
 		return 1
 	}
 
 	// read response
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("Failed reading file transfer response body:", err)
+		fmt.Println("Failed to get download link:", err)
 		return 1
 	}
 
