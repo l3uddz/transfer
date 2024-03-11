@@ -56,7 +56,6 @@ func main() {
 	}
 	
 	if cli.Update {
-		fmt.Println("Testing for updates...")
 		if err := selfUpdate(); err != nil {
 			os.Exit(1)
 			} else {
